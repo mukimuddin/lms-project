@@ -6,27 +6,30 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// In-memory students data
+// ==================== IN-MEMORY DATA ====================
+
 let students = [
   { id: 1, name: "Sakib Hasan", email: "sakib@example.com", batch: "Web Dev - July 2025" },
   { id: 2, name: "Naimur Rahman", email: "naimur@example.com", batch: "Web Dev - July 2025" },
   { id: 3, name: "Rafiul Islam", email: "rafi@example.com", batch: "Web Dev - June 2025" },
 ];
 
-// In-memory batches data
 let batches = [
   { id: 1, name: "Web Dev - July 2025" },
   { id: 2, name: "Web Dev - June 2025" }
 ];
 
+let teachers = [
+  { id: 1, name: "Rafiul Islam", email: "rafi@example.com", subject: "Math" },
+  { id: 2, name: "Asif Mahmud", email: "asif@example.com", subject: "Physics" }
+];
+
 // ==================== STUDENT ROUTES ====================
 
-// Get all students
 app.get("/students", (req, res) => {
   res.json(students);
 });
 
-// Create new student
 app.post("/students", (req, res) => {
   const { name, email, batch } = req.body;
   if (!name || !email || !batch) {
@@ -42,15 +45,11 @@ app.post("/students", (req, res) => {
   res.status(201).json(newStudent);
 });
 
-// Update student by id
 app.put("/students/:id", (req, res) => {
   const studentId = parseInt(req.params.id);
   const { name, email, batch } = req.body;
-
   const student = students.find((s) => s.id === studentId);
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
-  }
+  if (!student) return res.status(404).json({ error: "Student not found" });
 
   if (name) student.name = name;
   if (email) student.email = email;
@@ -59,31 +58,24 @@ app.put("/students/:id", (req, res) => {
   res.json(student);
 });
 
-// Delete student by id
 app.delete("/students/:id", (req, res) => {
   const studentId = parseInt(req.params.id);
   const index = students.findIndex((s) => s.id === studentId);
-  if (index === -1) {
-    return res.status(404).json({ error: "Student not found" });
-  }
+  if (index === -1) return res.status(404).json({ error: "Student not found" });
+
   const deleted = students.splice(index, 1);
   res.json(deleted[0]);
 });
 
 // ==================== BATCH ROUTES ====================
 
-// Get all batches
 app.get("/batches", (req, res) => {
   res.json(batches);
 });
 
-// Create new batch
 app.post("/batches", (req, res) => {
   const { name } = req.body;
-
-  if (!name) {
-    return res.status(400).json({ error: "Batch name is required" });
-  }
+  if (!name) return res.status(400).json({ error: "Batch name is required" });
 
   const newBatch = {
     id: batches.length ? batches[batches.length - 1].id + 1 : 1,
@@ -92,6 +84,80 @@ app.post("/batches", (req, res) => {
 
   batches.push(newBatch);
   res.status(201).json(newBatch);
+});
+
+app.put("/batches/:id", (req, res) => {
+  const batchId = parseInt(req.params.id);
+  const { name } = req.body;
+
+  const batch = batches.find((b) => b.id === batchId);
+  if (!batch) return res.status(404).json({ error: "Batch not found" });
+  if (!name) return res.status(400).json({ error: "Batch name is required" });
+
+  batch.name = name;
+  res.json(batch);
+});
+
+app.delete("/batches/:id", (req, res) => {
+  const batchId = parseInt(req.params.id);
+  const index = batches.findIndex((b) => b.id === batchId);
+  if (index === -1) return res.status(404).json({ error: "Batch not found" });
+
+  const deletedBatch = batches.splice(index, 1);
+  res.json(deletedBatch[0]);
+});
+
+// ==================== TEACHER ROUTES ====================
+
+app.get("/teachers", (req, res) => {
+  res.json(teachers);
+});
+
+app.post("/teachers", (req, res) => {
+  const { name, email, subject } = req.body;
+  if (!name || !email || !subject) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+  const newTeacher = {
+    id: teachers.length ? teachers[teachers.length - 1].id + 1 : 1,
+    name,
+    email,
+    subject
+  };
+  teachers.push(newTeacher);
+  res.status(201).json(newTeacher);
+});
+
+app.put("/teachers/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, email, subject } = req.body;
+  const teacher = teachers.find(t => t.id === id);
+  if (!teacher) return res.status(404).json({ error: "Teacher not found" });
+
+  if (name) teacher.name = name;
+  if (email) teacher.email = email;
+  if (subject) teacher.subject = subject;
+
+  res.json(teacher);
+});
+
+app.delete("/teachers/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = teachers.findIndex(t => t.id === id);
+  if (index === -1) return res.status(404).json({ error: "Teacher not found" });
+
+  const deleted = teachers.splice(index, 1);
+  res.json(deleted[0]);
+});
+
+// ==================== ADMIN REPORTS ROUTE ====================
+
+app.get("/reports", (req, res) => {
+  res.json({
+    totalStudents: students.length,
+    totalTeachers: teachers.length,
+    totalBatches: batches.length,
+  });
 });
 
 // ==================== SERVER START ====================
