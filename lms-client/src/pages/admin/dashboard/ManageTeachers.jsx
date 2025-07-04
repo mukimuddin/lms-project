@@ -3,144 +3,150 @@ import { useState, useEffect } from "react";
 export default function ManageTeachers() {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [form, setForm] = useState({ name: "", email: "", subject: "" });
-  const [editId, setEditId] = useState(null); // null means no edit mode
+  const [formData, setFormData] = useState({ name: "", email: "", subject: "" });
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    fetchTeachers();
+    fetch("http://localhost:5000/teachers")
+      .then((res) => res.json())
+      .then((data) => {
+        setTeachers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching teachers:", err);
+        setLoading(false);
+      });
   }, []);
 
-  const fetchTeachers = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:5000/teachers");
-      const data = await res.json();
-      setTeachers(data);
-    } catch (err) {
-      alert("Failed to fetch teachers");
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
   const handleInputChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const resetForm = () => {
-    setForm({ name: "", email: "", subject: "" });
-    setEditId(null);
-  };
-
-  const handleSubmit = async () => {
-    const { name, email, subject } = form;
-    if (!name.trim() || !email.trim() || !subject.trim()) {
-      alert("All fields are required");
+  const handleAddTeacher = async () => {
+    if (!formData.name || !formData.email || !formData.subject) {
+      alert("Please fill in all fields");
       return;
     }
 
     try {
-      if (editId === null) {
-        // Add new teacher
-        const res = await fetch("http://localhost:5000/teachers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Failed to add teacher");
-        const newTeacher = await res.json();
-        setTeachers([...teachers, newTeacher]);
-      } else {
-        // Update existing teacher
-        const res = await fetch(`http://localhost:5000/teachers/${editId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Failed to update teacher");
-        const updatedTeacher = await res.json();
-        setTeachers(
-          teachers.map((t) => (t.id === editId ? updatedTeacher : t))
-        );
-      }
-      resetForm();
+      const res = await fetch("http://localhost:5000/teachers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) throw new Error("Failed to add teacher");
+
+      const newTeacher = await res.json();
+      setTeachers([...teachers, newTeacher]);
+      setFormData({ name: "", email: "", subject: "" });
     } catch (err) {
-      alert(err.message);
+      console.error("Add error:", err);
+      alert("Error adding teacher");
     }
   };
 
   const handleEdit = (teacher) => {
-    setForm({ name: teacher.name, email: teacher.email, subject: teacher.subject });
-    setEditId(teacher.id);
+    setEditingId(teacher.id);
+    setFormData({ name: teacher.name, email: teacher.email, subject: teacher.subject });
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.email || !formData.subject) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/teachers/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) throw new Error("Failed to update teacher");
+
+      const updated = await res.json();
+      setTeachers((prev) =>
+        prev.map((t) => (t.id === editingId ? updated : t))
+      );
+      setEditingId(null);
+      setFormData({ name: "", email: "", subject: "" });
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Error updating teacher");
+    }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this teacher?")) return;
+    const confirm = window.confirm("Are you sure you want to delete this teacher?");
+    if (!confirm) return;
+
     try {
       const res = await fetch(`http://localhost:5000/teachers/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete teacher");
-      setTeachers(teachers.filter((t) => t.id !== id));
-      if (editId === id) resetForm();
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      setTeachers((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
-      alert(err.message);
+      console.error("Delete error:", err);
+      alert("Error deleting teacher");
     }
   };
 
   if (loading) return <p className="p-6">Loading teachers...</p>;
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <div className="max-w-3xl mx-auto mt-10 p-6 bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-6">Manage Teachers</h1>
 
-      {/* Form */}
-      <div className="mb-6 space-y-3">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         <input
           type="text"
           name="name"
-          placeholder="Name"
-          value={form.name}
+          value={formData.name}
           onChange={handleInputChange}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          placeholder="Name"
+          className="border border-gray-300 rounded px-3 py-2"
         />
         <input
           type="email"
           name="email"
-          placeholder="Email"
-          value={form.email}
+          value={formData.email}
           onChange={handleInputChange}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          placeholder="Email"
+          className="border border-gray-300 rounded px-3 py-2"
         />
         <input
           type="text"
           name="subject"
-          placeholder="Subject"
-          value={form.subject}
+          value={formData.subject}
           onChange={handleInputChange}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          placeholder="Subject"
+          className="border border-gray-300 rounded px-3 py-2"
         />
-        <div>
-          <button
-            onClick={handleSubmit}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {editId === null ? "Add Teacher" : "Update Teacher"}
-          </button>
-          {editId !== null && (
-            <button
-              onClick={resetForm}
-              className="ml-3 px-4 py-2 rounded border border-gray-400 hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Teacher List */}
-      <table className="w-full text-left border border-gray-300">
+      {editingId ? (
+        <button
+          onClick={handleSave}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-6"
+        >
+          Save Changes
+        </button>
+      ) : (
+        <button
+          onClick={handleAddTeacher}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-6"
+        >
+          Add Teacher
+        </button>
+      )}
+
+      <table className="w-full border border-gray-300 text-left">
         <thead className="bg-gray-100">
           <tr>
             <th className="p-3 border-b">Name</th>
@@ -158,26 +164,19 @@ export default function ManageTeachers() {
               <td className="p-3 border-b space-x-2">
                 <button
                   onClick={() => handleEdit(teacher)}
-                  className="text-blue-600 hover:underline"
+                  className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(teacher.id)}
-                  className="text-red-600 hover:underline"
+                  className="bg-red-600 text-white px-2 py-1 rounded text-sm"
                 >
                   Delete
                 </button>
               </td>
             </tr>
           ))}
-          {teachers.length === 0 && (
-            <tr>
-              <td colSpan="4" className="p-3 text-center text-gray-500">
-                No teachers found.
-              </td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>

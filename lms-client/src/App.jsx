@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import StudentLogin from './pages/student/Login';
 import TeacherLogin from './pages/teacher/Login';
 import AdminLogin from './pages/admin/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import StudentDashboard from './pages/student/Dashboard';
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -36,24 +37,45 @@ export default function App() {
         <Route path="/teacher/login" element={<TeacherLogin />} />
         <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Nested routes for student dashboard */}
-        <Route path="/student/dashboard" element={<StudentDashboard />}>
+        {/* Student dashboard routes protected for "student" role */}
+        <Route
+          path="/student/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<StudentHome />} />
           <Route path="batch" element={<StudentBatch />} />
           <Route path="schedule" element={<StudentSchedule />} />
           <Route path="progress" element={<StudentProgress />} />
         </Route>
 
-        {/* Nested routes for teacher dashboard */}
-        <Route path="/teacher/dashboard" element={<TeacherDashboard />}>
+        {/* Teacher dashboard routes protected for "teacher" role */}
+        <Route
+          path="/teacher/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <TeacherDashboard />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<TeacherHome />} />
           <Route path="batches" element={<TeacherBatches />} />
           <Route path="reports" element={<TeacherReports />} />
           <Route path="schedule" element={<TeacherSchedule />} />
         </Route>
 
-        {/* Nested routes for admin dashboard */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />}>
+        {/* Admin dashboard routes protected for "admin" role */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<AdminHome />} />
           <Route path="manage-students" element={<ManageStudents />} />
           <Route path="manage-teachers" element={<ManageTeachers />} />

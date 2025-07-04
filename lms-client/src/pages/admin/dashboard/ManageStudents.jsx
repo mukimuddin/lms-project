@@ -4,6 +4,12 @@ export default function ManageStudents() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [batch, setBatch] = useState("");
+
+  const [editId, setEditId] = useState(null);
+
   useEffect(() => {
     fetch("http://localhost:5000/students")
       .then((res) => res.json())
@@ -17,35 +23,57 @@ export default function ManageStudents() {
       });
   }, []);
 
-  const handleAddStudent = async () => {
-    const name = prompt("Enter student name:");
-    const email = prompt("Enter student email:");
-    const batch = prompt("Enter student batch:");
-
-    if (!name || !email || !batch) {
-      alert("All fields are required!");
+  const handleAddOrUpdate = async () => {
+    if (!name.trim() || !email.trim() || !batch.trim()) {
+      alert("All fields are required");
       return;
     }
 
+    const url = editId
+      ? `http://localhost:5000/students/${editId}`
+      : "http://localhost:5000/students";
+
+    const method = editId ? "PUT" : "POST";
+
     try {
-      const res = await fetch("http://localhost:5000/students", {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, batch }),
       });
 
-      if (!res.ok) throw new Error("Failed to add student");
+      if (!res.ok) throw new Error("Failed to save student");
 
-      const newStudent = await res.json();
-      setStudents([...students, newStudent]);
+      const updatedStudent = await res.json();
+
+      if (editId) {
+        setStudents((prev) =>
+          prev.map((s) => (s.id === editId ? updatedStudent : s))
+        );
+      } else {
+        setStudents((prev) => [...prev, updatedStudent]);
+      }
+
+      // Reset
+      setName("");
+      setEmail("");
+      setBatch("");
+      setEditId(null);
     } catch (err) {
-      console.error("Add student error:", err);
-      alert("Error adding student");
+      console.error("Error saving student:", err);
+      alert("Failed to save student");
     }
   };
 
-  const handleDeleteStudent = async (id) => {
-    const confirm = window.confirm("Are you sure you want to delete this student?");
+  const handleEdit = (student) => {
+    setEditId(student.id);
+    setName(student.name);
+    setEmail(student.email);
+    setBatch(student.batch);
+  };
+
+  const handleDelete = async (id) => {
+    const confirm = window.confirm("Are you sure you want to delete?");
     if (!confirm) return;
 
     try {
@@ -53,58 +81,53 @@ export default function ManageStudents() {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Failed to delete student");
+      if (!res.ok) throw new Error("Delete failed");
 
-      setStudents(students.filter((s) => s.id !== id));
+      setStudents((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      console.error("Delete student error:", err);
-      alert("Error deleting student");
-    }
-  };
-
-  const handleEditStudent = async (student) => {
-    const name = prompt("Enter new name:", student.name);
-    const email = prompt("Enter new email:", student.email);
-    const batch = prompt("Enter new batch:", student.batch);
-
-    if (!name || !email || !batch) {
-      alert("All fields are required!");
-      return;
-    }
-
-    try {
-      const res = await fetch(`http://localhost:5000/students/${student.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, batch }),
-      });
-
-      if (!res.ok) throw new Error("Failed to update student");
-
-      const updated = await res.json();
-
-      setStudents(
-        students.map((s) => (s.id === student.id ? updated : s))
-      );
-    } catch (err) {
-      console.error("Edit student error:", err);
-      alert("Error editing student");
+      console.error("Delete error:", err);
+      alert("Failed to delete");
     }
   };
 
   if (loading) return <p className="p-6">Loading students...</p>;
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <div className="max-w-5xl mx-auto mt-10 p-6 bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-6">Manage Students</h1>
 
-      <button
-        onClick={handleAddStudent}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        Add Student
-      </button>
+      {/* Add/Edit Form */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Student Name"
+          className="border border-gray-300 rounded px-3 py-2"
+        />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="border border-gray-300 rounded px-3 py-2"
+        />
+        <input
+          type="text"
+          value={batch}
+          onChange={(e) => setBatch(e.target.value)}
+          placeholder="Batch"
+          className="border border-gray-300 rounded px-3 py-2"
+        />
+        <button
+          onClick={handleAddOrUpdate}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 col-span-1 sm:col-span-3"
+        >
+          {editId ? "Update Student" : "Add Student"}
+        </button>
+      </div>
 
+      {/* Student List */}
       <table className="w-full text-left border border-gray-300">
         <thead className="bg-gray-100">
           <tr>
@@ -120,16 +143,16 @@ export default function ManageStudents() {
               <td className="p-3 border-b">{student.name}</td>
               <td className="p-3 border-b">{student.email}</td>
               <td className="p-3 border-b">{student.batch}</td>
-              <td className="p-3 border-b flex gap-2">
+              <td className="p-3 border-b space-x-2">
                 <button
-                  onClick={() => handleEditStudent(student)}
-                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+                  onClick={() => handleEdit(student)}
+                  className="text-blue-600 hover:underline"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDeleteStudent(student.id)}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  onClick={() => handleDelete(student.id)}
+                  className="text-red-600 hover:underline"
                 >
                   Delete
                 </button>

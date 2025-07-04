@@ -1,24 +1,43 @@
-import React from 'react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+
+    localStorage.setItem("userRole", "admin");
+    localStorage.setItem("userEmail", email);
+
+    navigate("/admin/dashboard");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-red-50">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-red-600 mb-6 text-center">Admin Login</h2>
-        <form>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Username</label>
-            <input type="text" placeholder="admin01" className="w-full mt-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-400" />
-          </div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" placeholder="••••••••" className="w-full mt-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-400" />
-          </div>
-          <button type="submit" className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition">
-            Login
-          </button>
-        </form>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-8 rounded shadow-md max-w-md w-full"
+      >
+        <h2 className="text-2xl font-bold mb-6">Admin Login</h2>
+
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full border border-gray-300 px-4 py-2 mb-4 rounded"
+          required
+        />
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        >
+          Login
+        </button>
+      </form>
     </div>
   );
 }

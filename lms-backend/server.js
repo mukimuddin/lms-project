@@ -8,63 +8,72 @@ app.use(express.json());
 
 // ==================== IN-MEMORY DATA ====================
 
-let students = [
-  { id: 1, name: "Sakib Hasan", email: "sakib@example.com", batch: "Web Dev - July 2025" },
-  { id: 2, name: "Naimur Rahman", email: "naimur@example.com", batch: "Web Dev - July 2025" },
-  { id: 3, name: "Rafiul Islam", email: "rafi@example.com", batch: "Web Dev - June 2025" },
+// Unified users array (admin, teacher, student)
+let users = [
+  { id: 1, name: "Admin One", email: "admin@example.com", password: "admin123", role: "admin" },
+  { id: 2, name: "Teacher One", email: "teacher1@example.com", password: "teachpass", role: "teacher", batchIds: [1] },
+  { id: 3, name: "Student One", email: "student1@example.com", password: "studpass", role: "student", batchId: 1 },
 ];
 
+// Batches array
 let batches = [
   { id: 1, name: "Web Dev - July 2025" },
   { id: 2, name: "Web Dev - June 2025" }
 ];
 
-let teachers = [
-  { id: 1, name: "Rafiul Islam", email: "rafi@example.com", subject: "Math" },
-  { id: 2, name: "Asif Mahmud", email: "asif@example.com", subject: "Physics" }
-];
+// ==================== USER ROUTES ====================
 
-// ==================== STUDENT ROUTES ====================
+// Admin creates users (students, teachers, admins)
+app.post("/users", (req, res) => {
+  const { name, email, password, role, batchId, batchIds } = req.body;
 
-app.get("/students", (req, res) => {
-  res.json(students);
-});
-
-app.post("/students", (req, res) => {
-  const { name, email, batch } = req.body;
-  if (!name || !email || !batch) {
-    return res.status(400).json({ error: "Please provide name, email, and batch" });
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({ error: "Name, email, password, and role are required" });
   }
-  const newStudent = {
-    id: students.length ? students[students.length - 1].id + 1 : 1,
+
+  // Check if email exists
+  if(users.some(u => u.email === email)) {
+    return res.status(400).json({ error: "Email already exists" });
+  }
+
+  const newUser = {
+    id: users.length ? users[users.length - 1].id + 1 : 1,
     name,
     email,
-    batch,
+    password,
+    role,
   };
-  students.push(newStudent);
-  res.status(201).json(newStudent);
+
+  if (role === "student") newUser.batchId = batchId;
+  if (role === "teacher") newUser.batchIds = batchIds || [];
+
+  users.push(newUser);
+  res.status(201).json({ ...newUser, password: undefined }); // don't send password back
 });
 
-app.put("/students/:id", (req, res) => {
-  const studentId = parseInt(req.params.id);
-  const { name, email, batch } = req.body;
-  const student = students.find((s) => s.id === studentId);
-  if (!student) return res.status(404).json({ error: "Student not found" });
+// Login route
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
 
-  if (name) student.name = name;
-  if (email) student.email = email;
-  if (batch) student.batch = batch;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password required" });
+  }
 
-  res.json(student);
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) return res.status(401).json({ error: "Invalid email or password" });
+
+  const { password: _, ...userWithoutPassword } = user;
+  res.json(userWithoutPassword);
 });
 
-app.delete("/students/:id", (req, res) => {
-  const studentId = parseInt(req.params.id);
-  const index = students.findIndex((s) => s.id === studentId);
-  if (index === -1) return res.status(404).json({ error: "Student not found" });
-
-  const deleted = students.splice(index, 1);
-  res.json(deleted[0]);
+// Get users by role (optional)
+app.get("/users/:role", (req, res) => {
+  const role = req.params.role;
+  const filteredUsers = users.filter(u => u.role === role);
+  res.json(filteredUsers.map(u => {
+    const { password, ...rest } = u;
+    return rest;
+  }));
 });
 
 // ==================== BATCH ROUTES ====================
@@ -107,57 +116,13 @@ app.delete("/batches/:id", (req, res) => {
   res.json(deletedBatch[0]);
 });
 
-// ==================== TEACHER ROUTES ====================
-
-app.get("/teachers", (req, res) => {
-  res.json(teachers);
-});
-
-app.post("/teachers", (req, res) => {
-  const { name, email, subject } = req.body;
-  if (!name || !email || !subject) {
-    return res.status(400).json({ error: "All fields are required" });
-  }
-  const newTeacher = {
-    id: teachers.length ? teachers[teachers.length - 1].id + 1 : 1,
-    name,
-    email,
-    subject
-  };
-  teachers.push(newTeacher);
-  res.status(201).json(newTeacher);
-});
-
-app.put("/teachers/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const { name, email, subject } = req.body;
-  const teacher = teachers.find(t => t.id === id);
-  if (!teacher) return res.status(404).json({ error: "Teacher not found" });
-
-  if (name) teacher.name = name;
-  if (email) teacher.email = email;
-  if (subject) teacher.subject = subject;
-
-  res.json(teacher);
-});
-
-app.delete("/teachers/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = teachers.findIndex(t => t.id === id);
-  if (index === -1) return res.status(404).json({ error: "Teacher not found" });
-
-  const deleted = teachers.splice(index, 1);
-  res.json(deleted[0]);
-});
-
 // ==================== ADMIN REPORTS ROUTE ====================
 
 app.get("/reports", (req, res) => {
-  res.json({
-    totalStudents: students.length,
-    totalTeachers: teachers.length,
-    totalBatches: batches.length,
-  });
+  const totalStudents = users.filter(u => u.role === "student").length;
+  const totalTeachers = users.filter(u => u.role === "teacher").length;
+  const totalBatches = batches.length;
+  res.json({ totalStudents, totalTeachers, totalBatches });
 });
 
 // ==================== SERVER START ====================

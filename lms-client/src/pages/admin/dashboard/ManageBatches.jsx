@@ -4,11 +4,11 @@ export default function ManageBatches() {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [batchName, setBatchName] = useState("");
-  const [editId, setEditId] = useState(null);
-  const [editName, setEditName] = useState("");
+  const [editingBatchId, setEditingBatchId] = useState(null);
+  const [editedName, setEditedName] = useState("");
 
-  // Fetch batches
-  const fetchBatches = () => {
+  // Fetch all batches
+  useEffect(() => {
     fetch("http://localhost:5000/batches")
       .then((res) => res.json())
       .then((data) => {
@@ -19,15 +19,14 @@ export default function ManageBatches() {
         console.error("Error fetching batches:", err);
         setLoading(false);
       });
-  };
-
-  useEffect(() => {
-    fetchBatches();
   }, []);
 
   // Add new batch
   const handleAddBatch = async () => {
-    if (!batchName.trim()) return alert("Batch name required");
+    if (!batchName.trim()) {
+      alert("Batch name cannot be empty");
+      return;
+    }
 
     try {
       const res = await fetch("http://localhost:5000/batches", {
@@ -36,55 +35,66 @@ export default function ManageBatches() {
         body: JSON.stringify({ name: batchName }),
       });
 
+      if (!res.ok) throw new Error("Failed to add batch");
+
       const newBatch = await res.json();
       setBatches([...batches, newBatch]);
       setBatchName("");
     } catch (err) {
-      console.error(err);
+      console.error("Add batch error:", err);
       alert("Error adding batch");
     }
   };
 
-  // Start editing
-  const handleEdit = (id, name) => {
-    setEditId(id);
-    setEditName(name);
+  // Start editing a batch
+  const handleEdit = (batch) => {
+    setEditingBatchId(batch.id);
+    setEditedName(batch.name);
   };
 
-  // Submit edit
-  const handleUpdate = async () => {
-    if (!editName.trim()) return alert("Name can't be empty");
+  // Save the updated batch name
+  const handleSave = async (id) => {
+    if (!editedName.trim()) {
+      alert("Name cannot be empty");
+      return;
+    }
 
     try {
-      const res = await fetch(`http://localhost:5000/batches/${editId}`, {
+      const res = await fetch(`http://localhost:5000/batches/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName }),
+        body: JSON.stringify({ name: editedName }),
       });
 
+      if (!res.ok) throw new Error("Failed to update batch");
+
       const updated = await res.json();
-      setBatches(
-        batches.map((b) => (b.id === updated.id ? updated : b))
+      setBatches((prev) =>
+        prev.map((b) => (b.id === id ? updated : b))
       );
-      setEditId(null);
-      setEditName("");
+      setEditingBatchId(null);
+      setEditedName("");
     } catch (err) {
-      console.error(err);
+      console.error("Update error:", err);
       alert("Error updating batch");
     }
   };
 
-  // Delete batch
+  // Delete a batch
   const handleDelete = async (id) => {
-    if (!confirm("Delete this batch?")) return;
+    const confirm = window.confirm("Are you sure you want to delete this batch?");
+    if (!confirm) return;
 
     try {
-      await fetch(`http://localhost:5000/batches/${id}`, {
+      const res = await fetch(`http://localhost:5000/batches/${id}`, {
         method: "DELETE",
       });
-      setBatches(batches.filter((b) => b.id !== id));
+
+      if (!res.ok) throw new Error("Failed to delete batch");
+
+      setBatches((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
-      console.error(err);
+      console.error("Delete error:", err);
       alert("Error deleting batch");
     }
   };
@@ -95,7 +105,6 @@ export default function ManageBatches() {
     <div className="max-w-3xl mx-auto mt-10 p-6 bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-6">Manage Batches</h1>
 
-      {/* Add new */}
       <div className="flex gap-3 mb-6">
         <input
           type="text"
@@ -108,56 +117,50 @@ export default function ManageBatches() {
           onClick={handleAddBatch}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Add
+          Add Batch
         </button>
       </div>
 
-      {/* Batch List */}
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {batches.map((batch) => (
           <li
             key={batch.id}
-            className="flex items-center justify-between border-b pb-2"
+            className="flex justify-between items-center border p-3 rounded"
           >
-            {editId === batch.id ? (
-              <>
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="flex-grow border border-gray-300 px-2 py-1 mr-2"
-                />
+            {editingBatchId === batch.id ? (
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="flex-grow border rounded px-2 py-1 mr-3"
+              />
+            ) : (
+              <span className="text-gray-800">{batch.name}</span>
+            )}
+
+            <div className="flex gap-2">
+              {editingBatchId === batch.id ? (
                 <button
-                  onClick={handleUpdate}
-                  className="text-green-600 font-bold mr-2"
+                  onClick={() => handleSave(batch.id)}
+                  className="bg-green-500 text-white px-2 py-1 rounded text-sm"
                 >
                   Save
                 </button>
+              ) : (
                 <button
-                  onClick={() => setEditId(null)}
-                  className="text-gray-500"
+                  onClick={() => handleEdit(batch)}
+                  className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
                 >
-                  Cancel
+                  Edit
                 </button>
-              </>
-            ) : (
-              <>
-                <span>{batch.name}</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(batch.id, batch.name)}
-                    className="text-blue-600 font-semibold"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(batch.id)}
-                    className="text-red-600 font-semibold"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
+              )}
+              <button
+                onClick={() => handleDelete(batch.id)}
+                className="bg-red-600 text-white px-2 py-1 rounded text-sm"
+              >
+                Delete
+              </button>
+            </div>
           </li>
         ))}
       </ul>
