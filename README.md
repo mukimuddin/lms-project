@@ -41,3 +41,48 @@ A simple Learning Management System (LMS) backend API with role-based user manag
    ```bash
    git clone https://github.com/yourusername/lms-project.git
    cd lms-project
+npm install
+node server.js
+The server will start on http://localhost:5000
+
+API Endpoints
+User Routes
+POST /users — Admin creates a new user (student, teacher, or admin)
+
+POST /login — User login with email and password
+
+GET /users/:role — Get all users by role (admin, teacher, student)
+
+Batch Routes
+GET /batches — List all batches
+
+POST /batches — Create a new batch
+
+PUT /batches/:id — Update batch by ID
+
+DELETE /batches/:id — Delete batch by ID
+
+Reports
+GET /reports — Get total counts of students, teachers, and batches
+
+Notes & Future Improvements
+Security: Passwords are currently stored in plain text. Implement hashing (e.g., bcrypt) before production.
+
+Persistence: Replace in-memory arrays with a real database (MongoDB, PostgreSQL, etc.).
+
+Validation: Enhance input validation and error handling.
+
+Frontend: Connect this API with React frontend including protected routes and dynamic dashboards.
+
+Testing: Add automated tests for routes and functionality.
+
+Contributing
+Feel free to open issues or submit pull requests. Your feedback and help are appreciated!
+
+License
+MIT
+
+Contact
+Mukim Uddin
+Email: mdmukimuddin.bd@gmail.com
+GitHub: mukimuddin
